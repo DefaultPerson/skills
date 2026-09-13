@@ -193,6 +193,10 @@ for tree, root, is_codex in (("skills", SKILLS, False), ("skills-codex/skills", 
             problems.append(f"{n} lines > {MAX_SKILL_LINES}")
         record(not problems, label, "; ".join(problems) if problems else f"{n} lines")
 
+_bab = frontmatter(read(SKILLS / "babysit" / "SKILL.md")) or {}
+record(str(_bab.get("disable-model-invocation", "false")).lower() != "true",
+       "babysit stays model-invocable (a scheduled /loop fire only runs skills Claude may invoke)")
+
 # ── 4. agents ──
 section("agents/*.md frontmatter")
 agent_names = set()
