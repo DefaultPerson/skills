@@ -3,6 +3,26 @@
 Notable changes only, newest first. No releases and no tags — `main` is the
 distribution, and an install tracks the latest commit.
 
+## 2026-09-13 — second compression pass
+
+Every skill went through the same critical read babysit got, and the same
+pattern held everywhere: what was left to cut was duplication, not procedure.
+Sections that restated the frontmatter, rules stated once per step and again in
+a Rails block, tool output formats the model sees the moment it runs the script.
+Roughly 20-30% came off each file; nothing on the must-keep list moved.
+
+Four more defects surfaced while cutting. `autoresearch` wrote its two state
+files and then demanded a clean working tree every iteration — so from
+iteration 1 onward it would stash its own memory and "investigate", and the
+branch it told you to merge never actually contained the record of the run; it
+now commits the pair each iteration. Its ideate ladder listed "otherwise
+explore" above the pivot and circuit-break rungs, making both unreachable. The
+`verify-done` workflow counted a tier where every agent died as "there were no
+proofs" and could then call the run DONE on scenarios alone. `extract-links`
+documented an exit-code table that contradicted its own scripts, and its
+YouTube extractor lacked `--no-playlist`, so one `watch?v=X&list=Y` URL walked
+an entire playlist against a 300-second timeout.
+
 ## 2026-09-13 — babysit
 
 `babysit` got a second pass: the "when NOT to use" list restated its own

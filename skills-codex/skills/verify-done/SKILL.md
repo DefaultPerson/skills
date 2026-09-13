@@ -51,9 +51,9 @@ VERDICT: DONE | NOT-DONE — <reason>
   NOT covered (check manually): …
 ```
 
-DONE requires conformance fully passing, no confirmed scenario gap, and quality not blocking. With no proofs at all, the verdict rests on scenarios alone — say so in the reason, it is a softer result than a proof-driven one.
+DONE requires conformance fully passing, no confirmed scenario gap, no high-risk scenario left unrun, and quality not blocking. With no proofs at all, the verdict rests on scenarios alone — say so in the reason, it is a softer result than a proof-driven one.
 
 ## Codex differences
 
-- No Workflow tool: the three tiers run in-session, in order. Scenario generation and the quality pass belong in a fresh sub-agent (`spawn_agent` / `wait_agent`) or a `codex exec -` subprocess — this session already knows what it built, and a self-review from that context grades itself.
+- No Workflow tool: the three tiers run in-session, in order. Scenario generation and the quality pass belong in a fresh sub-agent (`spawn_agent` / `wait_agent`) or a `codex exec -` subprocess — this session already knows what it built, and a self-review from that context grades itself. Pass the original intent text in their prompt: a plan that exists only in this session is invisible to them.
 - Never edit anything here. The verdict is the deliverable.

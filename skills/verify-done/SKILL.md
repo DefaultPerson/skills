@@ -69,8 +69,6 @@ VERDICT: DONE | NOT-DONE — <reason>
   NOT covered (check manually): …
 ```
 
-DONE requires conformance fully passing, no confirmed scenario gap, and quality not blocking. With no proofs at all, the verdict rests on scenarios alone — say so in the reason, it is a softer result than a proof-driven one.
+DONE requires conformance fully passing, no confirmed scenario gap, no high-risk scenario left unrun, and quality not blocking. With no proofs at all, the verdict rests on scenarios alone — say so in the reason, it is a softer result than a proof-driven one.
 
-## Not this skill
-
-`/verify` checks a single change, `/code-review` hunts bugs in a diff, `/simplify` applies quality fixes. Confirmed failures go back to whoever is building; quality findings go to `/simplify`.
+Confirmed failures go back to whoever is building; quality findings go to `/simplify`.

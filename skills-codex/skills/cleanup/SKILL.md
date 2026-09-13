@@ -25,8 +25,8 @@ Each input file goes through the pipeline independently. N inputs → N outputs,
 4. **Rewrite cleanly** into `<basename>.rewritten.<ext>`: fix grammar, drop exact duplicates, add `### ` subsections, fold chat noise into "Key takeaways" blocks. Preserve every idea. Don't bury critical content in `<details>` blocks.
 5. **Find what was lost** — the three levels below. Output: `<basename>.gaps.md`.
 6. **Stop and show the gaps.** Wait for the user's go-ahead before applying anything. Skip the wait only when there are zero gaps.
-7. **Apply their decisions.** `[MISSING]`/`[UNCOVERED]` → insert, `[PARTIAL]` → augment, `[REVERSED]` → fix. Delete the gaps file.
-8. **Final check against the ORIGINAL backup** (a different surface than the sorted file, so don't reuse step 5's results): run both scripts against `<file>.bak`, verify the survivors, then `mv <basename>.rewritten.<ext> <file>`. The `.bak` stays as the rollback.
+7. **Apply their decisions.** `[MISSING]`/`[UNCOVERED]` → insert, `[PARTIAL]` → augment, `[REVERSED]` → fix.
+8. **Final check against the ORIGINAL backup** (a different surface than the sorted file, so don't reuse step 5's results): run both scripts against `<file>.bak` (the gaps file is still an argument — delete it after this step, not before), verify the survivors, then `mv <basename>.rewritten.<ext> <file>`. The `.bak` stays as the rollback.
 9. **Report** per-source metrics plus an aggregate, then: `Cleanup done.` Recommend nothing downstream.
 
 Inputs over ~2000 lines get expensive in step 5 — suggest splitting first.
@@ -37,9 +37,7 @@ Three levels, in order, all mandatory. Each catches a class the others can't: th
 
 - **a — URLs, deterministic.** `python3 scripts/verify-rewrite.py <sorted> <rewritten>` (the `scripts/` and `roles/` directories sit next to this SKILL.md). Missing URLs go straight into the gaps file as `[MISSING]`.
 - **b — per-section semantic.** Pre-filter with grep (2-3 distinctive keywords per line, searched **only within that source's own file** — this scoping is what keeps multi-file runs honest), then run one fresh agent per 1-2 sections with the `roles/gap-detector.md` prompt, placeholders filled in, and wait for all of them before merging findings. Skip this level only for a single file under 50 lines; in multi-file mode it always runs, at least one agent per source. Findings merge in as `[MISSING]`/`[PARTIAL]`/`[REVERSED]`.
-- **c — fuzzy net.** `python3 scripts/verify-coverage.py <sorted> <rewritten> <gaps>` writes unmatched lines to a `.uncovered.tmp` file (it prints the path — use that, don't construct it). Verify them in batches of ~100 with `roles/coverage-verifier.md`; only `TRUE_MISSING` lines become `[UNCOVERED]` gaps. Delete the temp file afterwards.
-
-In step 8, run the same two scripts against `<file>.bak`. When step 5c found zero true gaps and the sorted file differs from the backup only by added headers, one agent over the whole uncovered list is enough (`loose`); otherwise batch as usual (`strict`).
+- **c — fuzzy net.** `python3 scripts/verify-coverage.py <sorted> <rewritten> <gaps>` writes unmatched lines to a `.uncovered.tmp` file (it prints the path — use that, don't construct it). Verify them in batches of ~100 (`strict`) with `roles/coverage-verifier.md`; only `TRUE_MISSING` lines become `[UNCOVERED]` gaps. Delete the temp file afterwards. At the step-8 re-run, one agent over the whole list is enough (`loose`) when this level found zero true gaps and the sorted file differs from the backup only by added headers; otherwise batch as usual (`strict`).
 
 ## Outputs
 
@@ -47,12 +45,8 @@ Per source: `<source>.bak` (untouched original), `<source>` (overwritten at step
 
 Ship only when no `[MISSING]`/`[PARTIAL]`/`[REVERSED]`/`[UNCOVERED]` marker is left, both final checks pass, and the `.bak` files are in place. cleanup does not commit — the user owns their git history.
 
-## Rails
+Out of scope: link content (run extract-links first), JSON/YAML/code dumps, and summarizing — this pipeline preserves, it does not compress.
 
-- A finding needs a quote from **both** files. If you can't quote the rewritten equivalent, it is missing.
-- Never apply gaps without the step 6 confirmation.
-- Never merge multiple inputs into one output.
-- Does not extract link content (run extract-links first), does not handle JSON/YAML/code dumps, does not summarize.
 
 ## Codex differences
 

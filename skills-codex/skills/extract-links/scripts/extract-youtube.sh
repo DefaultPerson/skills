@@ -12,13 +12,14 @@ OUT="${2:?usage: extract-youtube.sh <url> <output-dir>}"
 mkdir -p "$OUT"
 
 # Metadata first (cheap, gives us title etc. before subtitle work)
-timeout 60 yt-dlp --dump-json --no-warnings --socket-timeout 15 --retries 1 "$URL" 2>"$OUT/.yt-dlp.log" \
+timeout 60 yt-dlp --dump-json --no-warnings --no-playlist --socket-timeout 15 --retries 1 "$URL" 2>"$OUT/.yt-dlp.log" \
   | jq '{title, uploader, duration, upload_date, id, webpage_url}' \
   > "$OUT/metadata.json" || { echo "yt-dlp metadata failed or timed out: $URL ($(tail -1 "$OUT/.yt-dlp.log" 2>/dev/null))" >&2; exit 1; }
 
 # Subtitles: prefer manual (en, ru), fall back to auto-generated
 timeout 300 yt-dlp \
   --skip-download \
+  --no-playlist \
   --socket-timeout 15 \
   --retries 1 \
   --write-subs \

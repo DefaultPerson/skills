@@ -179,7 +179,7 @@ log(`Scenarios: ${scenarios.length} generated (${gen ? gen.discarded : 0} discar
 
 // ── Tier 3 — Quality (advisory; only if behaviour works) ──
 phase('Quality')
-const behaviorWorks = (tier1Pass || !t1Ran) && !tier2RealGap
+const behaviorWorks = (tier1Pass || !t1Ran) && !tier2RealGap && !tier2BlindSpot
 let t3 = { findings: [] }
 if (behaviorWorks) {
   t3 = (await agent(qualityPrompt(), { label: 'quality', phase: 'Quality', schema: QUALITY, model: MODEL })) || { findings: [] }
@@ -191,7 +191,9 @@ if (behaviorWorks) {
 // ── Synthesis ──
 phase('Synthesis')
 const qualityBlocks = !!a.blockOnQuality && (t3.findings || []).some((f) => f.severity === 'high')
-const scenarioOnly = !t1Ran
+// Based on what was ASKED for, not what came back: if every proof agent died,
+// that is a failed conformance tier, not a plan that had no proofs.
+const scenarioOnly = t1Items.length === 0
 // Nothing actually executed is never a pass — that is honesty rail 1.
 const nothingRan = !t1Ran && ran.length === 0
 const verdict = !nothingRan && (tier1Pass || scenarioOnly) && !tier2RealGap && !tier2BlindSpot && !qualityBlocks
