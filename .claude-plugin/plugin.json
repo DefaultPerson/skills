@@ -1,6 +1,5 @@
 {
   "name": "as",
-  "version": "1.0.1",
   "description": "Lean, battle-tested skills for AI coding agents in Claude Code and Codex CLI.",
   "author": {
     "name": "DefaultPerson",

@@ -1,6 +1,9 @@
 # Changelog
 
-## 1.0.1 — 2026-09-13
+Notable changes only, newest first. No releases and no tags — `main` is the
+distribution, and an install tracks the latest commit.
+
+## 2026-09-13 — babysit
 
 `babysit` got a second pass: the "when NOT to use" list restated its own
 frontmatter, the mode table restated branches the tick already encodes, and the
@@ -10,7 +13,7 @@ that never applies to an interval-armed loop, and offered a `tail`-shaped
 `log_cmd` that quietly defeats the only-new-lines rule — a cursor-less command
 now keeps a hash of the last line seen. 323 → 90 lines.
 
-## 1.0.0 — 2026-09-13
+## 2026-09-13 — rename to `as`, four skills dropped, the rest slimmed
 
 Renamed and cut down to what actually gets used. The repo is now
 `DefaultPerson/skills`, the plugin and its marketplace are both `as`, and the

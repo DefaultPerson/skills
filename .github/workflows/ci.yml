@@ -39,8 +39,12 @@ jobs:
       - name: Install Claude Code CLI
         run: npm i -g @anthropic-ai/claude-code@2.1.270
 
-      - name: Validate (claude plugin validate --strict)
+      # The manifest check runs non-strict on purpose: --strict turns the advisory
+      # "no version specified" note into an error, and this plugin deliberately
+      # ships no version so installs track the commit SHA. Real manifest errors
+      # still fail. Components stay strict.
+      - name: Validate (claude plugin validate)
         run: |
-          claude plugin validate . --strict
+          claude plugin validate .
           claude plugin validate ./skills --strict
           claude plugin validate ./agents --strict

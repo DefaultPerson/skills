@@ -5,9 +5,9 @@ Runnable locally (`python3 ci/validate.py`) and in CI. Pure stdlib. Exits
 non-zero on any failure; prints one line per check.
 
 Checks:
-  1. Manifests parse and agree: plugin.json name/version, marketplace.json
-     (name, plugins[0].name, NO version in the entry), Codex plugin.json
-     (name/version, skills == "./skills"), Codex marketplace (name, path).
+  1. Manifests parse and agree: plugin.json name and NO version anywhere on the
+     Claude side (installs track the commit SHA), marketplace.json name/entry,
+     Codex plugin.json (name, semver, skills == "./skills"), Codex marketplace.
   2. Parity: skills/ minus CLAUDE_ONLY == skills-codex/skills/.
   3. SKILL.md frontmatter: name == dir (bare, no plugin prefix), description
      present; Claude: description+when_to_use <= 1536 chars; Codex: description
@@ -129,13 +129,19 @@ if plugin and market:
     entry = (market.get("plugins") or [{}])[0]
     record(NAME and NAME == market.get("name") == entry.get("name"), "plugin name agrees across manifests",
            f"{NAME} / {market.get('name')} / {entry.get('name')}")
-    record(bool(plugin.get("version")), "plugin.json has version", str(plugin.get("version")))
-    record("version" not in entry, "marketplace entry has NO version (plugin.json is the single source)")
+    # No version anywhere on the Claude side: Claude Code then tracks the commit
+    # SHA, so every push to main reaches installed users. A version field would
+    # re-pin them until it was bumped by hand.
+    record("version" not in plugin, "plugin.json has NO version (installs track the commit SHA)")
+    record("version" not in entry, "marketplace entry has NO version")
     record(entry.get("source") == "./", 'marketplace entry source == "./"', str(entry.get("source")))
     record("skills" not in plugin and "agents" not in plugin, "plugin.json relies on default skills/ + agents/ discovery")
 if cx and plugin:
-    record(cx.get("name") == NAME and cx.get("version") == plugin.get("version"),
-           "codex plugin.json name+version agree", f"{cx.get('name')}@{cx.get('version')}")
+    # Codex needs a semver (OpenAI's validator rejects a manifest without one),
+    # so the two manifests agree on the name only.
+    record(cx.get("name") == NAME, "codex plugin.json name agrees", str(cx.get("name")))
+    record(bool(re.fullmatch(r"\d+\.\d+\.\d+", cx.get("version") or "")),
+           "codex plugin.json has a semver", str(cx.get("version")))
     record(cx.get("skills") == "./skills", 'codex plugin.json skills == "./skills"', str(cx.get("skills")))
     record(isinstance(cx.get("interface"), dict) and cx["interface"].get("displayName"), "codex plugin.json has interface block")
 if cmkt and NAME:

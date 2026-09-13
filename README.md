@@ -1,8 +1,6 @@
-# as
+# Skills
 
 Lean, battle-tested skills for AI coding agents — Claude Code and Codex CLI. Only the ones actually used, kept to what the model can't know on its own: contracts, verified gotchas, safety rails.
-
-> Formerly `iron-skills`. Coming from that: install `as@as` from the new marketplace **first**, then `claude plugin marketplace remove iron-skills` — removing a marketplace uninstalls the plugins that came from it.
 
 ## Install
 
@@ -12,7 +10,7 @@ Claude Code:
 claude plugin marketplace add DefaultPerson/skills && claude plugin install as@as
 ```
 
-Then `/plugin` → **Marketplaces** → `as` → **Enable auto-update** (third-party marketplaces don't auto-update by default).
+Then `/plugin` → **Marketplaces** → `as` → **Enable auto-update** (third-party marketplaces don't auto-update by default). With it on, every push to `main` reaches you.
 
 Codex CLI (≥ 0.154):
 
@@ -39,4 +37,6 @@ Run `/skill-doctor` to see what each skill costs in context.
 
 `git`, `bash`, `curl`, `jq`, `python3`. `extract-links` needs `yt-dlp` for YouTube links (in both modes) and `pandoc` for `--full` HTML. Scripts don't run under `claude --restricted`.
 
-Release history: [CHANGELOG.md](CHANGELOG.md).
+## Development
+
+No releases and no tags — `main` is the distribution. `python3 ci/validate.py` and `claude plugin validate . --strict` must pass; run `bash ci/build-codex.sh` after touching any shared script or role, since the Codex tree carries real copies (`codex plugin add` strips symlinks). Notable changes are in [CHANGELOG.md](CHANGELOG.md).
