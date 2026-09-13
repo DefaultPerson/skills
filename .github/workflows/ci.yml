@@ -23,8 +23,18 @@ jobs:
         with:
           node-version: "20"
 
-      # Structural + content invariants: manifests, skills↔skills-codex parity,
-      # SKILL/agent/command frontmatter, namespace hygiene, and py/js/bash syntax.
-      # Pure stdlib — also runnable locally with `python3 ci/validate.py`.
-      - name: Validate plugin
+      # Structural + content invariants: manifests, skills ↔ skills-codex parity,
+      # frontmatter, ${CLAUDE_SKILL_DIR} path hygiene, stale names, py/js/bash syntax.
+      - name: Validate (repo checks)
         run: python3 ci/validate.py
+
+      # Claude Code's own validator (manifest schema + skill/agent frontmatter).
+      # Pinned: the npm package is a launcher that fetches the native binary.
+      - name: Install Claude Code CLI
+        run: npm i -g @anthropic-ai/claude-code@2.1.270
+
+      - name: Validate (claude plugin validate --strict)
+        run: |
+          claude plugin validate . --strict
+          claude plugin validate ./skills --strict
+          claude plugin validate ./agents --strict

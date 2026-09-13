@@ -3,16 +3,14 @@ name: autoresearch
 description: >
   Autonomous keep-or-revert experiment loop: one atomic change per iteration,
   commit before verify, keep it when the metric improved, revert it when it
-  did not. Needs a git repo and a metric command that prints one number.
-  Triggers: "autoresearch", "/as:autoresearch", "optimize metric",
-  "keep or revert loop", "автоисследование", "оптимизируй метрику".
-when_to_use: >
-  You have a numeric objective (pass rate, latency, benchmark score, line
-  count) and want many small experiments run against it, each one committed
-  or reverted on its measurement. Not for one-off fixes, not for goals no
-  single command can score, not outside a git repo.
-argument-hint: "<goal> | --continue | --abort"
-allowed-tools: [Bash, Read, Edit, Write, Glob, Grep, Agent, AskUserQuestion]
+  did not. Needs a git repo and a metric command that prints one number. Use
+  it when you have a numeric objective (pass rate, latency, benchmark score,
+  line count) and want many small experiments run against it, each one
+  committed or reverted on its measurement; not for one-off fixes, not for
+  goals no single command can score, not outside a git repo. Triggers:
+  "autoresearch", "optimize metric", "keep or revert loop",
+  "автоисследование", "оптимизируй метрику".
+allowed-tools: [Bash, Read, Edit, Write, Glob, Grep]
 ---
 
 # autoresearch
@@ -23,14 +21,16 @@ context compaction cannot derail it.
 
 ## Usage
 
+Arguments (one of):
+
 ```
-/as:autoresearch <goal in natural language>
-/as:autoresearch --continue    # resume from the scratchpad, skip Setup
-/as:autoresearch --abort       # mark the run aborted; kept commits stay
+<goal in natural language>
+--continue    # resume from the scratchpad, skip Setup
+--abort       # mark the run aborted; kept commits stay
 ```
 
-Iterations run back-to-back in this session. To pace them instead, the user
-runs `/loop 30m /as:autoresearch --continue`.
+Iterations run back-to-back in this session; a run that outlives the session
+picks up again with `--continue`.
 
 ## Invariants
 
@@ -50,7 +50,7 @@ runs `/loop 30m /as:autoresearch --continue`.
 Skip entirely on `--continue` or when `autoresearch-scratchpad.md` already exists.
 
 1. Take the goal from the arguments; ask for it if empty.
-2. Ask in ONE AskUserQuestion batch: `scope` (paths that may be modified), `metric_cmd`, `guard_cmd` (optional sanity check, e.g. the test suite), `direction` (higher or lower is better), `max_iterations` (default 20). Free-text answers arrive through the "Other" option. Unattended, with nobody answering: scope = the paths the goal names, direction inferred from the goal, no guard, 20 iterations — print what you assumed.
+2. Ask, in one prose message: `scope` (paths that may be modified), `metric_cmd`, `guard_cmd` (optional sanity check, e.g. the test suite), `direction` (higher or lower is better), `max_iterations` (default 20). Unattended, with nobody answering: scope = the paths the goal names, direction inferred from the goal, no guard, 20 iterations — print what you assumed.
 3. Validate the metric once, here. Run `metric_cmd` into a `mktemp` log and read the number out of it. Contract: it prints exactly one number to stdout and exits 0. No number, several numbers, or a non-zero exit → fix the command with the user before starting. Every later iteration trusts this contract.
 4. `git status --porcelain` must be empty, then `git checkout -b autoresearch/<slug>` (slug = the goal lowercased, runs of non-`[a-z0-9]` collapsed to `-`, trimmed to 40 chars).
 5. Baseline = the number from step 3, logged as iteration 0.
@@ -91,19 +91,18 @@ approach; the last three iterations produced the same diff
 circuit-break, move that idea to `## Blocked ideas` and pick another. Nothing
 left to pick means the run is over — stop and report.
 
-**3. Delegate.** Spawn the `as:autoresearch-worker` subagent with the
+**3. Delegate.** Spawn a sub-agent (`spawn_agent` / `wait_agent`) with the
 hypothesis, `scope`, iteration number, goal and a few lines of recent
 learnings. It edits and commits; the parent reads no source files and no
-diffs, which is what keeps its context flat across iterations. Subagents run
-in the background, so wait for the worker's completion notification before
-verifying anything. Its final message is the only return channel:
+diffs, which is what keeps its context flat across iterations. Wait for it to
+finish before verifying anything. Its final message is the only return channel:
 `result: applied|aborted`, `commit`, `files_changed`, `summary`, `lesson`.
 On `result: aborted` nothing was committed — skip Verify and log DISCARD with
 its `summary`. A worker cut off by maxTurns or a rate limit returns partial
 output, and a final message missing those keys is no better: treat both as
-aborted, log DISCARD, note "partial" in the description. If the agent type is
-not registered, retry with `general-purpose` and inline the worker's contract
-in the prompt.
+aborted, log DISCARD, note "partial" in the description. Without multi-agent
+support, apply the change inline instead — reading only the in-scope files the
+hypothesis touches.
 
 **4. Verify.** Metric first: `mktemp` a log, run `metric_cmd` into it, extract
 the single number. Non-zero exit or no number → CRASH. Then `guard_cmd`, if
@@ -125,14 +124,13 @@ back to step 1 unless the run is finished.
 
 ## Stuck: rescue
 
-Optional, and only with `codex` on PATH. After 3 consecutive
+Optional, and only with the `claude` CLI on PATH. After 3 consecutive
 DISCARD/CRASH/GUARD_FAIL, pipe a read-only diagnosis prompt (goal,
 `metric_cmd`, direction, the last 3 history rows, the scratchpad body, and
 "propose one fundamentally different approach, do not edit files") into
-`codex exec -` via Bash — the `codex review … "<prompt>"` form is rejected by
-codex 0.154. Append the suggestion to `## Next to try` as
-`[from rescue iter N] <one line>`. Never apply a patch it proposes. No codex
-on PATH means no rescue; just pivot.
+`claude -p` via Bash. Append the suggestion to `## Next to try` as
+`[from rescue iter N] <one line>`. Never apply a patch it proposes. No second
+model on PATH means no rescue; just pivot.
 
 ## Finish
 
@@ -151,3 +149,11 @@ stop.
 `--abort` sets `status: aborted`, prints the summary and exits. Kept commits
 stay on the branch, and both state files stay with them as the record of the
 run.
+
+## Codex differences
+
+- Delegation uses Codex's own `spawn_agent` / `wait_agent`; the contract is the
+  one packaged for Claude Code as the `as:autoresearch-worker` agent.
+- Setup questions are asked in prose; under `codex exec` without a TTY the
+  defaults above are printed, never chosen silently.
+- Rescue calls `claude -p`, since `codex exec` is this loop's own model.

@@ -1,5 +1,76 @@
 # Changelog
 
+## 1.0.0 — 2026-09-13
+
+Renamed and cut down to what actually gets used. The repo is now
+`DefaultPerson/skills`, the plugin and its marketplace are both `as`, and the
+skills are invoked as `/as:<skill>` (the agent as `as:autoresearch-worker`).
+Existing installs migrate through `renames` in the marketplace manifest; the
+old marketplace is removed with `claude plugin marketplace remove iron-skills`.
+
+**Removed four skills.** `/herdr` (belongs with herdr itself), `/ship` (a
+routing table over other skills, whose main path — driving native `/goal` — a
+model cannot actually execute), `/blueprint` (2,600 lines that produced one
+plan in three months, and whose layout was rewritten three times in two days;
+native plan mode plus a `Done when:` proof covers it), and `/goal-prep` (1,970
+lines of interview script for writing a 4,000-character `/goal` condition). Six
+remain: autoresearch, babysit, cleanup, extract-links, svgl, verify-done.
+
+**Slimmed the rest by roughly 3-5x**, keeping what a model can't know —
+contracts, verified environment gotchas, safety rails — and dropping procedure
+it already performs well: the "wrong vs right" galleries, the Rules /
+Prior-commitment / Self-check triplication, JSON mock-ups of tool calls,
+version history in prose, and every "Differences from the old version" table.
+
+**Fixes that mattered more than the trimming:**
+
+- `verify-coverage.py` reported `COVERAGE 100%` with every URL deleted: the
+  short-line guard ran before the URL check, and `normalize()` strips URLs, so
+  a URL-only line was always "covered". URLs are now checked first, and the
+  final pass runs the URL script as well. `verify-rewrite.py` no longer strips
+  `s`, `t`, `list` and `index` as tracking parameters — `?s=` is a search query,
+  so two unrelated articles compared equal. Both scripts now read UTF-8
+  explicitly, and the gaps text is normalized once instead of per line (~100x
+  on a large file).
+- `autoresearch` dropped its `ScheduleWakeup`/`CronCreate` pacing: `durable` is
+  a no-op, cron jobs are session-only, `reason` is not in the tool's schema, and
+  the delay table optimised a prompt cache TTL that no longer exists.
+  Iterations now run back to back, and `/loop 30m /as:autoresearch --continue`
+  paces them if you want that. The temp-log path is created per run (it was set
+  during Setup, which `--continue` skips, so every resumed iteration crashed).
+- `agents/autoresearch-worker.md` used `allowed-tools:`, which subagents ignore
+  — it is `tools:`, so the "bounded" worker was running unbounded. It is now
+  `model: opus`, `effort: medium`.
+- Every skill waits for a delegated subagent's completion instead of assuming a
+  blocking call; `babysit` tracks the in-flight fix so a later tick can't spawn
+  a second one for the same signature, and derives its log window from the
+  cursor (a fixed `--since 6m` loses lines to `/loop` jitter).
+- Script and role paths go through `${CLAUDE_SKILL_DIR}`; the bare relative
+  paths resolved against the user's project, not the plugin.
+- `codex review --uncommitted "<prompt>"` is rejected by codex 0.154 — the
+  cross-model rescue uses `codex exec -` (and `claude -p` on the Codex side).
+- `extract-links`: yt-dlp calls are bounded (one unreachable video used to hang
+  a whole note), numeric HTML entities decode, block tags no longer glue
+  sentences together, a media-only Telegram post is reported as such instead of
+  an error, and the HTML path is pandoc-or-nothing — the sed fallback produced
+  mangled text that read like success.
+- `svgl` downloads through a temp file, so a 404 or a rate-limit page can no
+  longer clobber an existing logo with `--force`.
+- `verify-done` no longer returns DONE when every scenario came back UNKNOWN,
+  runs in the working tree instead of a worktree holding the last commit, caps
+  and reports its scenario fan-out, and reads its quality prompt from a path
+  rather than being handed 60 lines of it.
+
+**Packaging.** The Codex plugin shipped `"skills": "./"`, which Codex ignores,
+with no `skills/` directory to fall back to — it installed with zero skills.
+Codex variants now live in `skills-codex/skills/<name>/` and the manifest
+carries the `interface` block OpenAI's validator requires. `install-codex.sh`
+is gone (`~/.codex/skills` is deprecated and the symlink install diverges from
+the supported path). CI gained `claude plugin validate --strict`, and
+`ci/validate.py` was rewritten to check what now matters: manifest agreement,
+`${CLAUDE_SKILL_DIR}` path hygiene, description caps per host, bare skill and
+agent names, Codex asset parity, and workflow-script constraints.
+
 ## 0.12.0 — 2026-07-06
 
 New `/herdr` skill (Claude Code only) — control the [herdr](https://herdr.dev)

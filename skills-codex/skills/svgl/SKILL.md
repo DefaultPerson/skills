@@ -3,15 +3,12 @@ name: svgl
 description: >
   Fetch brand/tech logos as SVG files from the svgl.app public API — by name,
   by category, or list categories. Handles light/dark variants and wordmarks.
-  Public catalogue only (~670 logos, growing). Triggers: "svgl", "/as:svgl",
-  "get logo", "fetch logo", "svg logo", "download logo", "логотип",
-  "svg иконка", "достань логотип".
-when_to_use: >
-  You want one or more brand/tech logos as local SVG files and svgl.app likely
-  has them. Not for non-SVG assets, private logos, or as a general image
-  downloader. With --json it only prints metadata.
-argument-hint: "<name...> | --category <Category> | --list-categories"
-allowed-tools: [Bash, Read, Glob, AskUserQuestion]
+  Public catalogue only (~670 logos, growing). Use when you want one or more
+  brand/tech logos as local SVG files; not for non-SVG assets, private logos,
+  or as a general image downloader. With --json it only prints metadata.
+  Triggers: "svgl", "get logo", "fetch logo", "svg logo", "download logo",
+  "логотип", "svg иконка", "достань логотип".
+allowed-tools: [Bash, Read, Glob]
 ---
 
 # svgl
@@ -20,10 +17,12 @@ Search svgl.app, pick the right logo, download the `.svg` files into the project
 
 ## Usage
 
+Arguments (one of):
+
 ```
-/as:svgl <name> [name2 ...] [flags]
-/as:svgl --category <Category> [flags]
-/as:svgl --list-categories
+<name> [name2 ...] [flags]
+--category <Category> [flags]
+--list-categories
 ```
 
 Flags: `--theme light|dark|both` (default `both`), `--out <dir>` (default `./svgl/`), `--wordmark`, `--json` (metadata only, no download), `--limit N` (client-side cap), `--all` (take every match, no questions), `--force` (overwrite existing files).
@@ -43,7 +42,7 @@ Flags: `--theme light|dark|both` (default `both`), `--out <dir>` (default `./svg
 
 ## Script
 
-`bash "${CLAUDE_SKILL_DIR}/scripts/svgl.sh" <subcommand>` — curl + jq, no auth, base URL `https://api.svgl.app`.
+`bash scripts/svgl.sh <subcommand>` — the `scripts/` directory sits next to this SKILL.md (use the skill's path from the skills list). curl + jq, no auth, base URL `https://api.svgl.app`.
 
 | Subcommand | Output |
 |---|---|
@@ -56,7 +55,11 @@ Flags: `--theme light|dark|both` (default `both`), `--out <dir>` (default `./svg
 
 - Filename slug = title lowercased, runs of non-`[a-z0-9]` → `-` (`D3.js` → `d3-js`).
 - `<slug>.svg`; theme variants `<slug>-light.svg` / `<slug>-dark.svg`; wordmarks `<slug>-wordmark[-<theme>].svg`.
-- Exact case-insensitive title match wins. Otherwise more than one match → `AskUserQuestion` with up to 4 candidates (title — category); `--all` skips the question. Confirm before a bulk category download.
+- Exact case-insensitive title match wins. Otherwise more than one match → show up to 4 candidates (title — category) as a numbered list and ask in prose (numbers / "all" / "cancel"); `--all` skips the question. Confirm before a bulk category download.
 - Existing files are skipped unless `--force`.
-- Report every term as `saved` / `exists` / `error (<reason>)` / `not found` in your reply text (the user does not see raw command output), plus one aggregate line.
+- Report every term as `saved` / `exists` / `error (<reason>)` / `not found`, plus one aggregate line.
 - Never commit, never touch `.gitignore` or other project files.
+
+## Codex differences
+
+- Under `codex exec` (no TTY) there is nobody to ask: on an ambiguous match stop with an explicit error instead of taking the first hit.

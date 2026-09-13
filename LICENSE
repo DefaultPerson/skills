@@ -4,34 +4,18 @@ Copyright (c) 2026 DefaultPerson
 
 Portions of this work are adapted from third-party sources:
 
-- tolibear/goalbuddy (MIT, Copyright (c) 2026 Tolibear) —
-  the 11-field Intake Compiler protocol, diagnostic ladder pattern,
-  goal.md charter structure, T999 audit pattern, and Worker subagent
-  receipt pattern. Adapted into:
-    - skills/goal-prep/references/intake-compiler.md
-    - skills/goal-prep/references/diagnostic-ladder.md
-    - skills/goal-prep/templates/goal.md
-    - agents/autoresearch-worker.md
+- tolibear/goalbuddy (MIT, Copyright (c) 2026 Tolibear) — the bounded
+  Worker subagent contract (structured final message, scope constraints),
+  adapted into agents/autoresearch-worker.md.
   https://github.com/tolibear/goalbuddy
-
-- openai/codex-plugin-cc (Apache 2.0, Copyright (c) 2026 OpenAI) —
-  review result-handling rules (codex-result-handling skill): do not
-  auto-apply fixes from a review, preserve evidence boundaries. Adapted
-  into skills/autoresearch/references/codex-integration.md.
-  https://github.com/openai/codex-plugin-cc
 
 - Cursor team-kit `thermo-nuclear-code-quality-review`
   (https://github.com/cursor/plugins, commit 3347cba) — the
-  implementation-quality / maintainability review substance (the
-  PR-review ceremony stripped), used as the Tier 3 advisory pass in
-  skills/accept/roles/quality-review.md. See the upstream repository for
-  its license terms.
-
-Reference (NOT carried in this codebase): openai/codex (Apache 2.0)
-ships a /goal command at codex-rs/core/templates/goals/ with the same
-architecture as Claude Code's native /goal. This plugin defers loop
-execution to whichever /goal is built into Claude Code, and does not
-duplicate that prose.
+  implementation-quality / maintainability review substance (PR-review
+  ceremony stripped), used as the Tier 3 advisory pass in
+  skills/verify-done/roles/quality-review.md and its Codex copy
+  skills-codex/skills/verify-done/roles/quality-review.md. See the upstream
+  repository for its license terms.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

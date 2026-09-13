@@ -1,42 +1,19 @@
 {
-  "name": "iron-skills",
-  "owner": {
-    "name": "DefaultPerson"
-  },
+  "name": "as",
+  "description": "Lean, battle-tested skills for AI coding agents in Claude Code and Codex CLI.",
+  "owner": { "name": "DefaultPerson", "url": "https://github.com/DefaultPerson" },
+  "renames": { "iron-skills": "as" },
   "plugins": [
     {
-      "name": "iron-skills",
+      "name": "as",
       "source": "./",
-      "description": "Battle-tested skills for AI coding agents in Claude Code and Codex CLI.",
-      "version": "0.12.0",
+      "description": "Lean, battle-tested skills for AI coding agents in Claude Code and Codex CLI.",
       "category": "development",
       "keywords": [
-        "cleanup",
-        "blueprint",
-        "spec",
-        "extract-links",
-        "notes",
-        "youtube",
-        "telegram",
-        "svgl",
-        "svg",
-        "logo",
-        "icons",
-        "babysit",
-        "logs",
-        "deploy",
-        "monitor",
-        "autonomous",
-        "code-quality",
-        "maintainability",
-        "goal-prep",
-        "autoresearch",
-        "goal",
-        "verify-done",
-        "acceptance",
-        "gate",
-        "herdr",
-        "multiplexer"
+        "cleanup", "extract-links", "notes", "youtube", "telegram",
+        "svgl", "svg", "logo",
+        "babysit", "logs", "deploy", "monitor", "autonomous",
+        "autoresearch", "verify-done", "acceptance", "gate"
       ]
     }
   ]

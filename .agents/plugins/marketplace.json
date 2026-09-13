@@ -1,9 +1,9 @@
 {
-  "name": "iron-skills",
-  "interface": { "displayName": "iron-skills" },
+  "name": "as",
+  "interface": { "displayName": "as" },
   "plugins": [
     {
-      "name": "iron-skills",
+      "name": "as",
       "source": { "source": "local", "path": "./skills-codex" },
       "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
       "category": "Productivity"

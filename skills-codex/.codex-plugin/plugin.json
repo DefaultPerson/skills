@@ -1,20 +1,25 @@
 {
-  "name": "iron-skills",
-  "version": "0.12.0",
-  "description": "Battle-tested skills for AI coding agents in Claude Code and Codex CLI.",
-  "skills": "./",
-  "homepage": "https://github.com/DefaultPerson/iron-skills",
-  "repository": "https://github.com/DefaultPerson/iron-skills",
+  "name": "as",
+  "version": "1.0.0",
+  "description": "Lean, battle-tested skills for AI coding agents in Claude Code and Codex CLI.",
+  "author": { "name": "DefaultPerson", "url": "https://github.com/DefaultPerson" },
+  "homepage": "https://github.com/DefaultPerson/skills",
+  "repository": "https://github.com/DefaultPerson/skills",
   "license": "MIT",
-  "keywords": [
-    "cleanup",
-    "blueprint",
-    "extract-links",
-    "svgl",
-    "goal-prep",
-    "autoresearch",
-    "verify-done",
-    "skills",
-    "codex"
-  ]
+  "keywords": ["cleanup", "extract-links", "svgl", "autoresearch", "verify-done", "skills", "codex"],
+  "skills": "./skills",
+  "interface": {
+    "displayName": "as",
+    "shortDescription": "Lean, battle-tested agent skills",
+    "longDescription": "Skills for real work with notes and code: cleanup (lossless reorganization), extract-links (YouTube/Telegram/HTML into your notes), verify-done (acceptance gate), autoresearch (keep-or-revert metric loop), svgl (brand logos as SVG).",
+    "developerName": "DefaultPerson",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://github.com/DefaultPerson/skills",
+    "defaultPrompt": [
+      "Clean up my messy notes file into a structured doc.",
+      "Summarise every link in this note inline.",
+      "Verify the finished work against the original plan."
+    ]
+  }
 }

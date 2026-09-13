@@ -1,5 +1,9 @@
 {
-  "name": "iron-skills",
-  "version": "0.12.0",
-  "description": "Battle-tested skills for AI coding agents in Claude Code and Codex CLI."
+  "name": "as",
+  "version": "1.0.0",
+  "description": "Lean, battle-tested skills for AI coding agents in Claude Code and Codex CLI.",
+  "author": { "name": "DefaultPerson", "url": "https://github.com/DefaultPerson" },
+  "homepage": "https://github.com/DefaultPerson/skills",
+  "repository": "https://github.com/DefaultPerson/skills",
+  "license": "MIT"
 }

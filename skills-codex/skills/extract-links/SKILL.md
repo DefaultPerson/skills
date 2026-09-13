@@ -4,14 +4,11 @@ description: >
   Annotate every URL in a notes file with what's behind it. By default writes a
   one-line gist inline next to each link; with --full it pulls the actual
   content (YouTube subtitles, Telegram posts, articles) into a local extracted/
-  tree and points at it. Triggers: "extract-links", "/as:extract-links",
+  tree and points at it. Use when a note has 3+ URLs and you want their content
+  available without opening each one; not for a single URL you can just open,
+  and not for private or paywalled resources. Triggers: "extract-links",
   "развернуть ссылки", "expand links", "fetch URLs", "извлеки контент".
-when_to_use: >
-  A note has 3+ URLs and you want their content available without opening each
-  one. NOT for a single URL you can just open, and not for private or
-  paywalled resources — those are out of scope and get reported as errors.
-argument-hint: "<note.md> [--full] [--force]"
-allowed-tools: [Bash, Read, Edit, Glob, Grep, WebFetch, AskUserQuestion]
+allowed-tools: [Bash, Read, Edit, Glob, Grep]
 ---
 
 # extract-links
@@ -27,31 +24,30 @@ Find every URL in the note, work out what it is, and write that back into the no
 - **Full-mode layout:** `<note-dir>/extracted/<note-basename>/<slug>/`, one shared `extracted/` parent per directory. Slug is `<type>-<short-id>` (`youtube-dQw4w9WgXcQ`, `telegram-durov-342`, `html-blog-example-com`), max 50 chars.
 - Per-type output: YouTube → `subtitles.<lang>.txt` + `metadata.json`; Telegram → `post.md` + `media/urls.txt`; HTML → `content.md` + `metadata.json`. Failures append to `<extracted-root>/.errors.log` and the URL stays un-annotated.
 - Full mode adds `extracted/` to the `.gitignore` at the **git root**, idempotently. Light mode writes nothing but the note.
-- **Report every URL** with a state: `summarised` / `extracted` / `error (<reason>)` / `skipped (reference)` / `skipped (user)`, plus an aggregate. The Bash output only reaches you, so put the report in your reply.
+- **Report every URL** with a state: `summarised` / `extracted` / `error (<reason>)` / `skipped (reference)` / `skipped (user)`, plus an aggregate.
 - Never commit. The note belongs to the user.
 
 ## Light mode (default)
 
-For each URL: `bash "${CLAUDE_SKILL_DIR}/scripts/summarize-url.sh" <url>` prints labelled metadata (`TYPE` / `TITLE` / `UPLOADER` / `DURATION` / `TEXT` / `DESC`) or an `ERROR:` line. Condense it into one plain sentence — what the link is and why it is probably in this note, ~140 chars — and append `→ _<sentence>_`.
+For each URL: `bash scripts/summarize-url.sh <url>` (the `scripts/` directory sits next to this SKILL.md) prints labelled metadata (`TYPE` / `TITLE` / `UPLOADER` / `DURATION` / `TEXT` / `DESC`) or an `ERROR:` line. Condense it into one plain sentence — what the link is and why it is probably in this note, ~140 chars — and append `→ _<sentence>_`.
 
-If the script returned `ERROR:`, or only a bare title, say so: `→ _(Telegram post — preview unavailable)_`. **Never invent content you did not fetch.** For an HTML page whose metadata is too thin, WebFetch is a reasonable second try; for YouTube and Telegram it is not — only the scripts reach those.
+If the script returned `ERROR:`, or only a bare title, say so: `→ _(Telegram post — preview unavailable)_`. **Never invent content you did not fetch.**
 
 ## Full mode (`--full`)
 
-Route by URL: YouTube (`watch?v=` / `youtu.be`) → `scripts/extract-youtube.sh`, public Telegram post (`t.me/<channel>/<id>`) → `scripts/extract-telegram.sh`, anything else → `scripts/extract-html.sh`, which needs pandoc and exits non-zero without it; fall back to WebFetch and save its text as `content.md`.
+Route by URL: YouTube (`watch?v=` / `youtu.be`) → `scripts/extract-youtube.sh`, public Telegram post (`t.me/<channel>/<id>`) → `scripts/extract-telegram.sh`, anything else → `scripts/extract-html.sh`, which needs pandoc and exits non-zero without it.
 
-Some URLs in a note are references, not content — bare hosts, docs landing pages, repo roots, citation links. Flag those and ask once, in a single batched question, before skipping them; default to skipping. Don't decide silently: judging content you haven't seen is the user's call, not yours.
+Some URLs in a note are references, not content — bare hosts, docs landing pages, repo roots, citation links. Flag those and ask once before skipping them; default to skipping. Don't decide silently: judging content you haven't seen is the user's call, not yours.
 
 An error on one URL never stops the run: log it, leave that URL bare, keep going.
 
 ## Gotchas
 
-- `yt-dlp` and `curl` can hang on a flaky network — the scripts bound themselves, but wrap a whole-note run in your own patience budget, and report a URL that timed out as an error rather than waiting on it.
+- `yt-dlp` and `curl` can hang on a flaky network — the scripts bound themselves, but report a URL that timed out as an error rather than waiting on it.
 - A Telegram post with no text (photo/video only) is not an error — it has no preview text to extract. Say that in the annotation.
-- curl does not run JavaScript: single-page apps return a skeleton. WebFetch does better on those.
+- curl does not run JavaScript: single-page apps return a skeleton.
 - Long transcripts (a 2h video is ~30k words) will swamp whatever reads the note next. Mention the size rather than silently producing it.
 - Private channels, paywalls and login-only pages are out of scope.
-- Needs Bash — this skill can't run under `claude --restricted`.
 
 ## Rails
 
@@ -60,4 +56,7 @@ An error on one URL never stops the run: log it, leave that URL bare, keep going
 - Never drop the original URL.
 - Every URL ends up in the report with a state.
 
-Running without anyone to ask (a subagent, a scheduled run): skip the reference-looking URLs, install nothing, and say both in the report.
+## Codex differences
+
+- Ask in prose: list the reference-looking URLs as a numbered list and accept numbers / "all" / "none".
+- Under `codex exec` (no TTY) nobody can answer: skip the reference URLs, install nothing, and say both in the report.
