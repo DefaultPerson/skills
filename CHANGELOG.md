@@ -61,6 +61,16 @@ version history in prose, and every "Differences from the old version" table.
   and reports its scenario fan-out, and reads its quality prompt from a path
   rather than being handed 60 lines of it.
 
+**Caught by an adversarial pass over the result**, and fixed before release:
+`verify-coverage.py`'s new URL check made a surviving URL *sufficient* proof of
+coverage, so a line that kept its link but lost its prose read as covered — URLs
+are now necessary, never sufficient. `verify-done`'s workflow discarded agents
+that returned null (dropped, stopped, or over budget) and could call that a pass,
+and could reach DONE with nothing executed at all; dropped checks now land in the
+not-covered bucket and force NOT-DONE. `babysit`'s `allowed-tools` omitted the
+two tools its escalation path uses. `svgl` left downloads at `mktemp`'s 0600.
+`extract-links` named its scripts by a bare relative path in prose.
+
 **Packaging.** The Codex plugin shipped `"skills": "./"`, which Codex ignores,
 with no `skills/` directory to fall back to — it installed with zero skills.
 Codex variants now live in `skills-codex/skills/<name>/` and the manifest

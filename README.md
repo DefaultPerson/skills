@@ -2,7 +2,7 @@
 
 Lean, battle-tested skills for AI coding agents — Claude Code and Codex CLI. Only the ones actually used, kept to what the model can't know on its own: contracts, verified gotchas, safety rails.
 
-> Formerly `iron-skills`. Existing installs migrate automatically (`renames` in the marketplace). Remove the old marketplace once: `claude plugin marketplace remove iron-skills`.
+> Formerly `iron-skills`. Coming from that: install `as@as` from the new marketplace **first**, then `claude plugin marketplace remove iron-skills` — removing a marketplace uninstalls the plugins that came from it.
 
 ## Install
 
@@ -37,6 +37,6 @@ Run `/skill-doctor` to see what each skill costs in context.
 
 ## Prerequisites
 
-`git`, `bash`, `jq`, `python3`. `extract-links --full` needs `yt-dlp` (YouTube) and `pandoc` (HTML). Scripts don't run under `claude --restricted`.
+`git`, `bash`, `curl`, `jq`, `python3`. `extract-links` needs `yt-dlp` for YouTube links (in both modes) and `pandoc` for `--full` HTML. Scripts don't run under `claude --restricted`.
 
 Release history: [CHANGELOG.md](CHANGELOG.md).

@@ -74,6 +74,8 @@ case "$cmd" in
     [ "$code" = "200" ] || { echo "ERROR: HTTP $code for $url" >&2; exit 1; }
     # Validate it is actually an SVG (allow a leading XML decl / comments / BOM).
     head -c 1024 "$tmp" | grep -qiE '<svg|<\?xml' || { echo "ERROR: not an SVG (no <svg>/<?xml in first 1KB): $url" >&2; exit 1; }
+    # mktemp creates 0600; a downloaded asset should be readable like any other file.
+    chmod 644 "$tmp"
     mkdir -p "$dir" && mv "$tmp" "$out" || { echo "ERROR: cannot write $out" >&2; exit 1; }
     trap - EXIT
     echo "saved $out"

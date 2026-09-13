@@ -13,7 +13,7 @@ when_to_use: >
   log read, health check or single bug fix, and not a monitoring or paging
   system.
 argument-hint: "[stop | status | resume]"
-allowed-tools: [Bash, Glob, Grep, Read, Edit, Write, Agent, Skill, ToolSearch, TaskStop, AskUserQuestion]
+allowed-tools: [Bash, Glob, Grep, Read, Edit, Write, Agent, Skill, ToolSearch, TaskStop, Monitor, PushNotification, AskUserQuestion]
 ---
 
 # babysit

@@ -44,14 +44,17 @@ def words_set(text):
 
 def is_covered(line, rewritten_text, rewritten_norm, rewritten_words, rewritten_urls, norm_gaps, gaps_text):
     """Check if a sorted line is covered by rewritten or gaps."""
-    # URLs first: normalize() strips them, so a URL-only line normalizes to ""
-    # and would otherwise be skipped by the short-content guard below — i.e. a
-    # deleted URL would report as covered.
+    # URLs are checked first and are NECESSARY, never sufficient: normalize()
+    # strips them, so a URL-only line normalizes to "" and the short-content
+    # guard below would call a deleted URL "covered". A line that keeps its URL
+    # but loses its prose still has to pass the text checks underneath.
     line_urls = extract_urls(line)
-    if line_urls:
-        return all(url in rewritten_urls or url in gaps_text for url in line_urls)
+    if line_urls and not all(url in rewritten_urls or url in gaps_text for url in line_urls):
+        return False
 
     norm = normalize(line)
+    if line_urls and len(norm) < 4:
+        return True          # the line was only a URL, and that URL survived
 
     # Skip trivially short content
     if len(norm) < 4:
@@ -89,8 +92,11 @@ def main():
         sorted_lines = [l.rstrip() for l in f if l.strip()]
     with open(sys.argv[2], encoding='utf-8') as f:
         rewritten_text = f.read()
-    with open(sys.argv[3], encoding='utf-8') as f:
-        gaps_text = f.read()
+    try:
+        with open(sys.argv[3], encoding='utf-8') as f:
+            gaps_text = f.read()
+    except FileNotFoundError:
+        gaps_text = ''          # no gaps file yet (or already applied and deleted)
 
     rewritten_norm = normalize(rewritten_text)
     rewritten_urls = extract_urls(rewritten_text)

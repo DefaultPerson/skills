@@ -209,6 +209,9 @@ for f in sorted(AGENTS.glob("*.md")) if AGENTS.exists() else []:
 # ── 5. path hygiene ──
 section("path hygiene (${CLAUDE_SKILL_DIR})")
 INVOKE = re.compile(r"(?:\bbash\s+|\bpython3\s+|\bsh\s+|scriptPath:\s*|\bsource\s+)[\"'`]?(?P<path>[^\s\"'`]+)")
+# Role/reference files are usually named in prose inside backticks, not run — a bare
+# `roles/x.md` is the same cwd-relative bug as a bare `bash scripts/x.sh`.
+PROSE_PATH = re.compile(r"`(?P<path>(?:\./)?(?:scripts|roles|workflows|references)/[\w./-]+)`")
 for tree, root, is_codex in (("skills", SKILLS, False), ("skills-codex/skills", CODEX, True)):
     for d in skill_dirs(root):
         f = d / "SKILL.md"
@@ -221,7 +224,7 @@ for tree, root, is_codex in (("skills", SKILLS, False), ("skills-codex/skills", 
                 bad.append("mentions ${CLAUDE_SKILL_DIR} (Codex does not expand it)")
         else:
             for n, line in enumerate(text.splitlines(), 1):
-                for m in INVOKE.finditer(line):
+                for m in list(INVOKE.finditer(line)) + list(PROSE_PATH.finditer(line)):
                     path = m.group("path")
                     if re.match(r"(\./)?(scripts|roles|workflows|references)/", path):
                         bad.append(f"L{n}: `{path}` must use ${{CLAUDE_SKILL_DIR}}/…")
@@ -229,6 +232,28 @@ for tree, root, is_codex in (("skills", SKILLS, False), ("skills-codex/skills", 
                     if not (d / m.group(1)).exists():
                         bad.append(f"L{n}: ${{CLAUDE_SKILL_DIR}}/{m.group(1)} does not exist")
         record(not bad, f"{tree}/{d.name}/SKILL.md", "; ".join(bad[:4]))
+
+CLAUDE_ONLY_TOKENS = re.compile(r"AskUserQuestion|\bAgent\(|\bWorkflow\(|ScheduleWakeup|CronCreate|"
+                                r"PushNotification|TaskStop|EnterWorktree|\$\{CLAUDE_(SKILL_DIR|PLUGIN_ROOT)\}|"
+                                r"subagent_type|/loop\b")
+# `codex exec` is just a CLI the Claude host may shell out to; only the in-process
+# multi-agent primitives are Codex-host-only.
+CODEX_ONLY_TOKENS = re.compile(r"spawn_agent|wait_agent|close_agent")
+for tree, root, forbidden, why in (
+    ("skills-codex/skills", CODEX, CLAUDE_ONLY_TOKENS, "Claude-only mechanism in a Codex skill"),
+    ("skills", SKILLS, CODEX_ONLY_TOKENS, "Codex-only mechanism in a Claude skill"),
+):
+    for d in skill_dirs(root):
+        f = d / "SKILL.md"
+        if not f.exists():
+            continue
+        hits = []
+        for n, line in enumerate(read(f).splitlines(), 1):
+            m = forbidden.search(line)
+            # A line that explicitly says the mechanism is absent is documentation, not use.
+            if m and not re.search(r"\bno\b|\bnot\b|without|absent|unavailable|instead of", line, re.I):
+                hits.append(f"L{n}: {m.group(0)}")
+        record(not hits, f"{why}: {tree}/{d.name}", "; ".join(hits[:4]))
 
 # ── 6. names ──
 section("names (stale refs, /as:<skill>, as:<agent>)")
@@ -255,22 +280,43 @@ if NAME:
     bad = [f"{p}:{n} ({s})" for p, n, s in agent_refs if s not in agent_names]
     record(not bad, f"every {NAME}:<agent> names a real agent ({sorted(agent_names)})", " ".join(bad[:5]))
 
+section("allowed-tools covers the body")
+KNOWN_TOOLS = ["AskUserQuestion", "PushNotification", "ToolSearch", "TaskStop", "Monitor",
+               "WebFetch", "WebSearch", "Workflow", "EnterWorktree", "NotebookEdit", "Skill"]
+for d in skill_dirs(SKILLS):
+    f = d / "SKILL.md"
+    fm = frontmatter(read(f)) or {}
+    allowed = fm.get("allowed-tools", "")
+    if not allowed:
+        record(True, f"skills/{d.name}: no allowed-tools (inherits session tools)")
+        continue
+    body = read(f).split("---", 2)[-1]
+    missing = [t for t in KNOWN_TOOLS
+               if re.search(rf"\b{t}\b", body) and t not in allowed
+               and not re.search(rf"no {t}\b|without {t}\b", body, re.I)]
+    record(not missing, f"skills/{d.name}: allowed-tools covers the body", ", ".join(missing))
+
 # ── 7. codex packaging ──
 section("codex packaging")
 drift = []
 for name in sorted(ck):
     for sub in ("references", "scripts", "roles"):
-        cdir = CODEX / name / sub
-        if not cdir.is_dir():
-            continue
-        for cf in cdir.rglob("*"):
-            if cf.is_file() and "__pycache__" not in cf.parts:
-                srcf = SKILLS / name / cf.relative_to(CODEX / name)
-                if not srcf.is_file() or srcf.read_bytes() != cf.read_bytes():
-                    drift.append(str(rel(cf)))
-    for sub in ("references", "scripts", "roles"):
-        if (SKILLS / name / sub).is_dir() and not (CODEX / name / sub).is_dir():
-            drift.append(f"missing {rel(CODEX / name / sub)}")
+        sdir, cdir = SKILLS / name / sub, CODEX / name / sub
+        # Drive from the source side so a MISSING Codex file fails, not just a changed one.
+        if sdir.is_dir():
+            for sf in sdir.rglob("*"):
+                if sf.is_file() and "__pycache__" not in sf.parts:
+                    cf = cdir / sf.relative_to(sdir)
+                    if not cf.is_file():
+                        drift.append(f"missing {rel(cf)}")
+                    elif cf.read_bytes() != sf.read_bytes():
+                        drift.append(f"differs {rel(cf)}")
+        # ...and from the Codex side so a leftover file fails too.
+        if cdir.is_dir():
+            for cf in cdir.rglob("*"):
+                if cf.is_file() and "__pycache__" not in cf.parts:
+                    if not (sdir / cf.relative_to(cdir)).is_file():
+                        drift.append(f"orphan {rel(cf)}")
 record(not drift, "codex assets byte-identical to skills/ (run ci/build-codex.sh)", " ".join(drift[:5]))
 leak = [str(rel(p)) for p in (ROOT / "skills-codex").rglob("workflows") if p.is_dir()]
 record(not leak, "no workflows/ under skills-codex", " ".join(leak))
@@ -305,6 +351,11 @@ for sh in collect(".sh"):
     record(r.returncode == 0, f"bash -n {rel(sh)}", r.stderr.strip() if r.returncode else "")
 
 print("\n" + "=" * 48)
+MIN_CHECKS = 60   # bump when checks are added; a silent drop means one stopped running
+if checks < MIN_CHECKS:
+    print(f"FAILED — only {checks} checks ran, expected at least {MIN_CHECKS} "
+          f"(a check was removed or silently skipped)")
+    sys.exit(1)
 if failures:
     print(f"FAILED — {len(failures)}/{checks} checks failed:")
     for f in failures:

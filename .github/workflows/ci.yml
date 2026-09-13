@@ -24,9 +24,15 @@ jobs:
           node-version: "20"
 
       # Structural + content invariants: manifests, skills ↔ skills-codex parity,
-      # frontmatter, ${CLAUDE_SKILL_DIR} path hygiene, stale names, py/js/bash syntax.
+      # frontmatter, ${CLAUDE_SKILL_DIR} path hygiene, host-token separation,
+      # allowed-tools coverage, stale names, py/js/bash syntax.
       - name: Validate (repo checks)
         run: python3 ci/validate.py
+
+      # The Codex tree carries real copies (codex plugin add strips symlinks), so
+      # a forgotten build-codex.sh run must fail here, not at install time.
+      - name: Codex assets are in sync
+        run: bash ci/build-codex.sh && git diff --exit-code
 
       # Claude Code's own validator (manifest schema + skill/agent frontmatter).
       # Pinned: the npm package is a launcher that fetches the native binary.

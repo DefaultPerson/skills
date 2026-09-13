@@ -32,13 +32,13 @@ Find every URL in the note, work out what it is, and write that back into the no
 
 ## Light mode (default)
 
-For each URL: `bash "${CLAUDE_SKILL_DIR}/scripts/summarize-url.sh" <url>` prints labelled metadata (`TYPE` / `TITLE` / `UPLOADER` / `DURATION` / `TEXT` / `DESC`) or an `ERROR:` line. Condense it into one plain sentence — what the link is and why it is probably in this note, ~140 chars — and append `→ _<sentence>_`.
+For each URL: `bash "${CLAUDE_SKILL_DIR}/scripts/summarize-url.sh" <url>` prints labelled metadata (`TYPE` / `TITLE` / `UPLOADER` / `DURATION` / `TEXT` / `DESC`), a `NOTE:` line for a fetch that succeeded with nothing to show (a media-only Telegram post), or an `ERROR:` line. Condense it into one plain sentence — what the link is and why it is probably in this note, ~140 chars — and append `→ _<sentence>_`.
 
 If the script returned `ERROR:`, or only a bare title, say so: `→ _(Telegram post — preview unavailable)_`. **Never invent content you did not fetch.** For an HTML page whose metadata is too thin, WebFetch is a reasonable second try; for YouTube and Telegram it is not — only the scripts reach those.
 
 ## Full mode (`--full`)
 
-Route by URL: YouTube (`watch?v=` / `youtu.be`) → `scripts/extract-youtube.sh`, public Telegram post (`t.me/<channel>/<id>`) → `scripts/extract-telegram.sh`, anything else → `scripts/extract-html.sh`, which needs pandoc and exits non-zero without it; fall back to WebFetch and save its text as `content.md`.
+Route by URL, all under `${CLAUDE_SKILL_DIR}/scripts/`: YouTube (`watch?v=` / `youtu.be`) → `extract-youtube.sh`, public Telegram post (`t.me/<channel>/<id>`) → `extract-telegram.sh`, anything else → `extract-html.sh`, which needs pandoc and exits non-zero without it; fall back to WebFetch and save its text as `content.md`.
 
 Some URLs in a note are references, not content — bare hosts, docs landing pages, repo roots, citation links. Flag those and ask once, in a single batched question, before skipping them; default to skipping. Don't decide silently: judging content you haven't seen is the user's call, not yours.
 
@@ -47,7 +47,8 @@ An error on one URL never stops the run: log it, leave that URL bare, keep going
 ## Gotchas
 
 - `yt-dlp` and `curl` can hang on a flaky network — the scripts bound themselves, but wrap a whole-note run in your own patience budget, and report a URL that timed out as an error rather than waiting on it.
-- A Telegram post with no text (photo/video only) is not an error — it has no preview text to extract. Say that in the annotation.
+- A Telegram post with no text (photo/video only) is not an error — it has no preview text to extract. The scripts signal it as `NOTE:` (light) and exit 3 (full); say so in the annotation and count it as summarised, not failed.
+- Extractor exit codes: 0 extracted · 1 fetch failed · 2 unsupported or inaccessible URL · 3 media-only post (not a failure) · 4 pandoc missing.
 - curl does not run JavaScript: single-page apps return a skeleton. WebFetch does better on those.
 - Long transcripts (a 2h video is ~30k words) will swamp whatever reads the note next. Mention the size rather than silently producing it.
 - Private channels, paywalls and login-only pages are out of scope.

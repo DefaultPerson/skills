@@ -24,10 +24,11 @@ TITLE="$(printf '%s' "$HTML" | grep -oE '<title[^>]*>[^<]+</title>' | head -1 | 
 
 printf '%s' "$HTML" | pandoc -f html -t gfm -o "$OUT/content.md" 2>/dev/null || true
 
+# Write metadata only once there is content, so a failure leaves no half-populated dir.
+[ -s "$OUT/content.md" ] || { rm -f "$OUT/content.md"; echo "no content extracted (JS-heavy page or blocked?): $URL" >&2; exit 1; }
+
 jq -n --arg url "$URL" --arg title "${TITLE:-unknown}" \
   '{url: $url, title: $title, fetched_at: now | strftime("%Y-%m-%dT%H:%M:%SZ")}' \
   > "$OUT/metadata.json"
-
-[ -s "$OUT/content.md" ] || { echo "no content extracted (JS-heavy page or blocked?): $URL" >&2; exit 1; }
 
 echo "extracted: $URL → $(wc -w < "$OUT/content.md") words"

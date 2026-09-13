@@ -120,7 +120,9 @@ SCENARIO: ${s.scenario}
 Return PASS/FAIL/UNKNOWN + evidence + your confidence. A FAIL that merely reflects a feature the intent never asked for is NOT a fail — return UNKNOWN with confidence low and note "out-of-scope, confirm with human".
 ${RAILS}`
 
-const qualityPrompt = () => `Read the review instructions at ${a.qualityPromptPath || 'roles/quality-review.md'} — everything between the BEGIN/END markers if present, otherwise the whole file — and follow them exactly.
+const qualityPrompt = () => `${a.qualityPromptPath
+  ? `Read the review instructions at ${a.qualityPromptPath} and follow them exactly.`
+  : 'Audit the change for maintainability: structural simplification, oversized files, ad-hoc conditionals, needless indirection, unclear type boundaries, layer leaks, duplication. Findings only.'}
 
 Audit target: the changes just built in ${where}. Start from \`git diff HEAD\` (and \`git diff --stat\`); if the tree is clean, audit the most recent commit's diff (\`git show --stat HEAD\`). Judge only what that diff touches.
 
@@ -130,16 +132,21 @@ Emit the structured findings the instructions define. Findings only — no prose
 phase('Conformance')
 const proofs = a.doneWhenProofs || []
 const suites = [a.buildCmd, a.testCmd, a.regressionCmd].filter(Boolean)
-const t1 = (await pipeline(
-  [...proofs.map((p) => ({ kind: 'proof', p })), ...suites.map((cmd) => ({ kind: 'suite', cmd }))],
-  (item) => item.kind === 'proof'
-    ? agent(proofPrompt(item.p), { label: `proof:${item.p.id}`, phase: 'Conformance', schema: PROOF, model: MODEL })
-    : agent(suitePrompt(item.cmd), { label: `suite:${item.cmd}`, phase: 'Conformance', schema: PROOF, model: MODEL }),
-)).filter(Boolean)
+const t1Items = [...proofs.map((p) => ({ kind: 'proof', p })), ...suites.map((cmd) => ({ kind: 'suite', cmd }))]
+const t1Raw = await pipeline(t1Items, (item) => item.kind === 'proof'
+  ? agent(proofPrompt(item.p), { label: `proof:${item.p.id}`, phase: 'Conformance', schema: PROOF, model: MODEL })
+  : agent(suitePrompt(item.cmd), { label: `suite:${item.cmd}`, phase: 'Conformance', schema: PROOF, model: MODEL }))
+const t1 = t1Raw.filter(Boolean)
+// An agent that errored, was stopped, or was dropped for budget comes back null.
+// Those checks did NOT pass — they were never run, and must not vanish.
+const t1Dropped = t1Items.filter((_, i) => !t1Raw[i]).map((item) => ({
+  id: item.kind === 'proof' ? item.p.id : item.cmd,
+  evidence: 'check did not run (agent dropped, stopped, or over budget)',
+}))
 const t1Ran = t1.length > 0
-const tier1Pass = t1Ran && t1.every((r) => r.verdict === 'PASS')
+const tier1Pass = t1Ran && t1Dropped.length === 0 && t1.every((r) => r.verdict === 'PASS')
 const tier1Unknown = t1.some((r) => r.verdict === 'UNKNOWN')
-log(`Conformance: ${t1.filter((r) => r.verdict === 'PASS').length}/${t1.length} PASS, ${t1.filter((r) => r.verdict === 'UNKNOWN').length} UNKNOWN`)
+log(`Conformance: ${t1.filter((r) => r.verdict === 'PASS').length}/${t1Items.length} PASS, ${t1.filter((r) => r.verdict === 'UNKNOWN').length} UNKNOWN, ${t1Dropped.length} did not run`)
 
 // ── Tier 2 — Independent scenarios ──
 phase('Scenarios')
@@ -152,15 +159,20 @@ const picked = runnable
   .slice(0, MAX_SCENARIO_RUNS)
 const dropped = runnable.length - picked.length
 if (dropped > 0) log(`Scenarios: ${dropped} runnable scenario(s) over the ${MAX_SCENARIO_RUNS} cap — reported as not covered, not as passing`)
-const ran = (await pipeline(picked, (s) =>
-  agent(runPrompt(s), { label: `scenario`, phase: 'Scenarios', schema: SCEN, model: MODEL }))).filter(Boolean)
-const unrun = scenarios.filter((s) => !picked.includes(s)).map((s) => ({
+const ranRaw = await pipeline(picked, (s) =>
+  agent(runPrompt(s), { label: `scenario`, phase: 'Scenarios', schema: SCEN, model: MODEL }))
+const ran = ranRaw.filter(Boolean)
+const asUnknown = (s, why) => ({
   scenario: s.scenario, risk: s.risk, category: s.category, groundedIn: s.groundedIn,
-  verdict: 'UNKNOWN', confidence: 'low',
-  evidence: s.runnable ? 'over the per-run scenario cap — check manually' : 'not runnable here — check manually',
-}))
-const t2 = [...ran, ...unrun]
-const tier2RealGap = t2.some((s) => s.verdict === 'FAIL' && s.confidence === 'high')
+  verdict: 'UNKNOWN', confidence: 'low', evidence: why,
+})
+// Same rule as Tier 1: a scenario whose agent came back null was not executed.
+const scenarioDropped = picked.filter((_, i) => !ranRaw[i])
+  .map((s) => asUnknown(s, 'scenario did not run (agent dropped, stopped, or over budget)'))
+const unrun = scenarios.filter((s) => !picked.includes(s))
+  .map((s) => asUnknown(s, s.runnable ? 'over the per-run scenario cap — check manually' : 'not runnable here — check manually'))
+const t2 = [...ran, ...scenarioDropped, ...unrun]
+const tier2RealGap = t2.some((s) => s.verdict === 'FAIL' && s.confidence !== 'low')
 // A high-risk scenario nobody could run is not evidence of success.
 const tier2BlindSpot = t2.some((s) => s.verdict === 'UNKNOWN' && s.risk === 'high')
 log(`Scenarios: ${scenarios.length} generated (${gen ? gen.discarded : 0} discarded), ${ran.length} ran, ${t2.filter((s) => s.verdict === 'UNKNOWN').length} UNKNOWN`)
@@ -180,10 +192,15 @@ if (behaviorWorks) {
 phase('Synthesis')
 const qualityBlocks = !!a.blockOnQuality && (t3.findings || []).some((f) => f.severity === 'high')
 const scenarioOnly = !t1Ran
-const verdict = (tier1Pass || scenarioOnly) && !tier2RealGap && !tier2BlindSpot && !qualityBlocks ? 'DONE' : 'NOT-DONE'
-const reason = !tier1Pass && !scenarioOnly
-  ? (tier1Unknown ? 'conformance UNKNOWN — could not verify (no runnable env?)' : 'conformance FAIL')
-  : tier2RealGap ? 'a confirmed high-confidence scenario gap'
+// Nothing actually executed is never a pass — that is honesty rail 1.
+const nothingRan = !t1Ran && ran.length === 0
+const verdict = !nothingRan && (tier1Pass || scenarioOnly) && !tier2RealGap && !tier2BlindSpot && !qualityBlocks
+  ? 'DONE' : 'NOT-DONE'
+const reason = nothingRan
+  ? 'nothing could be run — could not verify (no proofs, no runnable scenarios)'
+  : !tier1Pass && !scenarioOnly
+  ? (t1Dropped.length ? 'some conformance checks never ran' : tier1Unknown ? 'conformance UNKNOWN — could not verify (no runnable env?)' : 'conformance FAIL')
+  : tier2RealGap ? 'a confirmed scenario gap'
   : tier2BlindSpot ? 'a high-risk scenario could not be run — could not verify'
   : qualityBlocks ? 'high-severity quality findings (--block-on-quality)'
   : scenarioOnly ? 'no conformance checks existed — scenario-driven verdict only (softer than proof-driven)'
@@ -191,11 +208,12 @@ const reason = !tier1Pass && !scenarioOnly
 return {
   verdict,
   reason,
-  conformance: { pass: tier1Pass, ran: t1Ran, results: t1 },
+  conformance: { pass: tier1Pass, ran: t1Ran, results: t1, didNotRun: t1Dropped },
   scenarios: { realGap: tier2RealGap, blindSpot: tier2BlindSpot, discarded: gen ? gen.discarded : 0, results: t2 },
   quality: { advisory: !a.blockOnQuality, findings: t3.findings || [] },
-  notCovered: [   // no silent truncation — every UNKNOWN, unrun or capped item
+  notCovered: [   // no silent truncation — every UNKNOWN, dropped, unrun or capped item
     ...t1.filter((r) => r.verdict === 'UNKNOWN').map((r) => ({ tier: 'conformance', id: r.id, evidence: r.evidence })),
+    ...t1Dropped.map((r) => ({ tier: 'conformance', id: r.id, evidence: r.evidence })),
     ...t2.filter((s) => s.verdict === 'UNKNOWN').map((s) => ({ tier: 'scenarios', scenario: s.scenario, risk: s.risk, evidence: s.evidence })),
   ],
 }
