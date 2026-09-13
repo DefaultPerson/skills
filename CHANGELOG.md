@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1 — 2026-09-13
+
+`babysit` got a second pass: the "when NOT to use" list restated its own
+frontmatter, the mode table restated branches the tick already encodes, and the
+alarm was spelled out as a shell tutorial. It also claimed to *stop* when it
+loses signal (it escalates and keeps observing), pointed at an Esc cancellation
+that never applies to an interval-armed loop, and offered a `tail`-shaped
+`log_cmd` that quietly defeats the only-new-lines rule — a cursor-less command
+now keeps a hash of the last line seen. 323 → 90 lines.
+
 ## 1.0.0 — 2026-09-13
 
 Renamed and cut down to what actually gets used. The repo is now
@@ -70,14 +80,6 @@ and could reach DONE with nothing executed at all; dropped checks now land in th
 not-covered bucket and force NOT-DONE. `babysit`'s `allowed-tools` omitted the
 two tools its escalation path uses. `svgl` left downloads at `mktemp`'s 0600.
 `extract-links` named its scripts by a bare relative path in prose.
-
-`babysit` got a second pass: the "when NOT to use" list restated its own
-frontmatter, the mode table restated branches the tick already encodes, and the
-alarm was spelled out as a shell tutorial. It also claimed to *stop* when it
-loses signal (it escalates and keeps observing), pointed at an Esc cancellation
-that never applies to an interval-armed loop, and offered a `tail`-shaped
-`log_cmd` that quietly defeats the only-new-lines rule — a cursor-less command
-now keeps a hash of the last line seen. 323 → 90 lines.
 
 **Packaging.** The Codex plugin shipped `"skills": "./"`, which Codex ignores,
 with no `skills/` directory to fall back to — it installed with zero skills.
