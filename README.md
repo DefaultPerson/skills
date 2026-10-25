@@ -29,6 +29,7 @@ Local checkout: `claude --plugin-dir /path/to/skills`, or `codex plugin marketpl
 - `/as:verify-done` — acceptance gate for finished work: re-runs `Done when:` proofs, tests independent scenarios, advisory quality pass. Read-only; answers DONE / NOT-DONE.
 - `/as:autoresearch` — keep-or-revert metric loop: one atomic change per iteration, commit before verify, revert what doesn't help.
 - `/as:svgl` — brand/tech logos as SVG files from svgl.app.
+- `/as:network-check` — CT certificates and subdomains, availability across countries, and cloud/exchange latency; choose local tools, APIs, or live pages with explicit measurement limits.
 - `/as:babysit` *(Claude Code only)* — watch a running service on a `/loop` cadence: fix → deploy → re-check, escalate only when stuck.
 
 Run `/skill-doctor` to see what each skill costs in context.
